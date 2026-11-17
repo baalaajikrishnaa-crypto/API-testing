@@ -1,0 +1,564 @@
+{
+  "info": {
+    "_postman_id": "5f5bbf7d-d667-498c-b522-a02c93d4ee40",
+    "name": "Tool Rental API - Portfolio",
+    "description": "An educational API testing portfolio using the Simple Tool Rental API and Postman. Includes automated tests for tools and the complete order lifecycle, with update verification and negative tests for 404 and 401 responses.\n\nRegister a test client manually to automatically save the API token before running the collection. The Collection Runner skips client registration. Never share or export real access tokens.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "58736776",
+    "_collection_link": "https://go.postman.co/collection/58736776-5f5bbf7d-d667-498c-b522-a02c93d4ee40?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\npm.test(\"Status is UP\", () => {\n    // Parse the JSON response for the checks below.\n    const responseJavaScript = pm.response.json();\n\n    pm.expect(responseJavaScript.status).to.eql(\"UP\");\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "status"
+          ]
+        },
+        "description": "Check that the API is available and returns HTTP 200 with status \"UP\". No authentication is required."
+      },
+      "response": []
+    },
+    {
+      "name": "Get all tools",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\n// Parse the JSON response for the checks below.\nconst responseJavaScript = pm.response.json();\npm.test(\"Response is an array\", () => {\n    pm.expect(responseJavaScript).to.be.an(\"array\");\n});\n// Select the first available tool in the requested category.\nconst tools = responseJavaScript.filter((tool) => tool.inStock === true);\nconst tool = tools[0];\n\n// Keep the API ID as a number for the strict comparison in the next request.\nif (tool !== undefined) {\n    pm.globals.set(\"toolId\", tool.id);\n}\n\npm.test(\"Tool found\", () => {\n    pm.expect(tool).to.be.an(\"object\");\n    pm.expect(tool.inStock).to.eql(true);\n\n    pm.expect(tool.category).to.eql(pm.collectionVariables.get(\"category\"));\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/tools?category={{category}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tools"
+          ],
+          "query": [
+            {
+              "key": "category",
+              "value": "{{category}}"
+            }
+          ]
+        },
+        "description": "Retrieve tools from the selected category and verify the response is an array. Select the first available tool, check its category and availability, and save its ID as the global `toolId` for the next requests."
+      },
+      "response": []
+    },
+    {
+      "name": "Get a single tool",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\n// Parse the JSON response for the checks below.\nconst responseJavaScript = pm.response.json();\n\n// A manually entered string ID will not equal the numeric response ID.\npm.test(\"Response toolId is as expected\", () => {\n    pm.expect(responseJavaScript.id).to.eql(pm.globals.get(\"toolId\"));\n});\n\npm.test(\"Current-Stock available\", () => {\n    pm.expect(responseJavaScript[\"current-stock\"]).to.be.above(0);\n});\n\n// Collection Runner only: skip registration after manual setup.\npm.execution.setNextRequest(\"Create a new order\");"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/tools/:toolId",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tools",
+            ":toolId"
+          ],
+          "variable": [
+            {
+              "key": "toolId",
+              "value": "{{toolId}}"
+            }
+          ]
+        },
+        "description": "Retrieve the selected tool and verify its ID and available stock. In Collection Runner, skip client registration and continue with Create a new order. The API token must be configured beforehand. This jump does not apply to individual requests sent with Send."
+      },
+      "response": []
+    },
+    {
+      "name": "Register a new API client",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\npm.test(\"Status code is 201\", function () {\n    pm.response.to.have.status(201);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Access token is returned\", () => {\n    pm.expect(responseJavaScript.accessToken).to.be.a(\"string\").and.not.empty;\n});\n\n// Save the token for the next requests.\nif (pm.response.code === 201 && responseJavaScript.accessToken) {\n    pm.collectionVariables.set(\"apiToken\", responseJavaScript.accessToken);\n}\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"clientName\": \"Postman\",\n    \"clientEmail\": \"silva_{{$randomFirstName}}@example.com\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api-clients",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api-clients"
+          ]
+        },
+        "description": "Register a fictional API client and verify that a valid access token is returned. The token is automatically saved in the `apiToken` collection variable for authenticated requests. Run this request manually before using the Collection Runner. Never share or export the token."
+      },
+      "response": []
+    },
+    {
+      "name": "Create a new order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\npm.test(\"Status code is 201\", function () {\n    pm.response.to.have.status(201);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Order ID is returned\", () => {\n    pm.expect(responseJavaScript.orderId).to.be.a(\"string\").and.not.empty;\n});\n\n// Save the order ID for the next requests.\nif (pm.response.code === 201 && responseJavaScript.orderId) {\n    pm.globals.set(\"orderId\", responseJavaScript.orderId);\n}\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"toolId\": {{toolId}},\n    \"customerName\": \"{{$randomFullName}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ]
+        },
+        "description": "Create a new order for the selected tool using a generated customer name and Bearer Token authentication. Verify HTTP 201 and a valid order ID, then save `orderId` globally for the next requests."
+      },
+      "response": []
+    },
+    {
+      "name": "Get all orders",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\npm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Created order is in the list\", () => {\n    const order = responseJavaScript.find(\n        (item) => item.orderId === pm.globals.get(\"orderId\")\n    );\n\n    pm.expect(order).to.be.an(\"object\");\n});\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ]
+        },
+        "description": "Retrieve all orders for the authenticated test client and verify HTTP 200. Check that the newly created order is present in the list by matching its ID with the global `orderId` variable."
+      },
+      "response": []
+    },
+    {
+      "name": "Get a single order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\npm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Order ID is correct\", () => {\n    pm.expect(responseJavaScript.orderId).to.eql(pm.globals.get(\"orderId\"));\n});\n\npm.test(\"Tool ID is correct\", () => {\n    pm.expect(responseJavaScript.toolId).to.eql(pm.globals.get(\"toolId\"));\n});\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders/:orderId?invoice=true",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            ":orderId"
+          ],
+          "query": [
+            {
+              "key": "invoice",
+              "value": "true"
+            }
+          ],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "{{orderId}}"
+            }
+          ]
+        },
+        "description": "Retrieve the created order with `invoice=true` to include invoice information. Verify HTTP 200 and confirm that the returned order ID and tool ID match the global variables from the previous requests."
+      },
+      "response": []
+    },
+    {
+      "name": "Update an order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {\n    pm.response.to.have.status(204);\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"customerName\": \"Christina {{$randomLastName}}\",\n    \"comment\": \"Pick-Up after 4PM!\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/orders/:orderId",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            ":orderId"
+          ],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "{{orderId}}"
+            }
+          ]
+        },
+        "description": "Update the test order with a generated customer name and a fixed comment. Verify HTTP 204 No Content. The next request, Verify updated order, confirms that the new comment was saved successfully."
+      },
+      "response": []
+    },
+    {
+      "name": "Verify updated order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\npm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Order comment was updated\", () => {\n    pm.expect(responseJavaScript.comment).to.eql(\"Pick-Up after 4PM!\");\n});\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders/:orderId",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            ":orderId"
+          ],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "{{orderId}}"
+            }
+          ]
+        },
+        "description": "Retrieve the order after the PATCH update and verify HTTP 200. Confirm that the comment was saved as \"Pick-Up after 4PM!\" before deleting the order."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete an order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 204\", function () {\n    pm.response.to.have.status(204);\n});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders/:orderId",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            ":orderId"
+          ],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "{{orderId}}"
+            }
+          ]
+        },
+        "description": "Delete the test order using the saved `orderId` and verify HTTP 204 No Content. This is the cleanup step before checking that the order no longer exists."
+      },
+      "response": []
+    },
+    {
+      "name": "Check if order deleted",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 404\", function () {\n    pm.response.to.have.status(404);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Error message is returned\", () => {\n    pm.expect(responseJavaScript.error).to.be.a(\"string\").and.not.empty;\n});\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{apiToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders/:orderId",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders",
+            ":orderId"
+          ],
+          "variable": [
+            {
+              "key": "orderId",
+              "value": "{{orderId}}"
+            }
+          ]
+        },
+        "description": "Verify that the deleted order returns HTTP 404 Not Found with a non-empty error message. After reviewing the test run, clear the global `toolId` and `orderId` variables manually."
+      },
+      "response": []
+    },
+    {
+      "name": "Tool not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "\npm.test(\"Status code is 404\", function () {\n    pm.response.to.have.status(404);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Error message is returned\", () => {\n    pm.expect(responseJavaScript.error).to.be.a(\"string\").and.not.empty;\n});\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/tools/:toolId",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "tools",
+            ":toolId"
+          ],
+          "variable": [
+            {
+              "key": "toolId",
+              "value": "999999999"
+            }
+          ]
+        },
+        "description": "Verify that the API returns 404 Not Found when requesting a non-existent tool ID. Check that an error message is returned."
+      },
+      "response": []
+    },
+    {
+      "name": "Get orders without authorization",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status code is 401\", function () {\n    pm.response.to.have.status(401);\n});\n\n// Parse the JSON response.\nconst responseJavaScript = pm.response.json();\n\npm.test(\"Error message is returned\", () => {\n    pm.expect(responseJavaScript.error).to.be.a(\"string\").and.not.empty;\n});\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/orders",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "orders"
+          ]
+        },
+        "description": "Verify that the API returns 401 Unauthorized when requesting orders without an access token. Check that an error message is returned."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://simple-tool-rental-api.click"
+    },
+    {
+      "key": "apiToken",
+      "value": ""
+    },
+    {
+      "key": "category",
+      "value": "trailers"
+    }
+  ]
+}
